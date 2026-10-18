@@ -41,6 +41,20 @@ Online sellers of consumer electronics (earbuds, smartwatches, power banks, PC p
 """)
 
 # ===========================================================================
+md("""## 0. Setup (run this first)
+
+This cell installs everything the notebook needs, using `!pip` commands:
+
+1. Installs the Python libraries (the same list as `requirements.txt`).
+2. Downloads the small English model that spaCy needs for named entity recognition.
+3. Downloads the NLTK word lists and the VADER sentiment lexicon.
+
+It needs an internet connection and is safe to run again. After the first run, restart the kernel and run all cells.""")
+
+code("""!pip install pandas numpy nltk scikit-learn spacy gensim plotly matplotlib seaborn wordcloud vaderSentiment
+!python -m spacy download en_core_web_sm
+!python -m nltk.downloader stopwords punkt punkt_tab wordnet omw-1.4 vader_lexicon""")
+
 md("""## 1a. Ethical Considerations, Bias & Data Privacy  *(Unit I: Ethical issues, bias, and data privacy in business NLP)*
 
 - **Public pages only.** Reviews were read from Flipkart's publicly viewable product review pages (the same pages any shopper sees without signing in). No login was used, no CAPTCHA or bot check was bypassed, and no restricted area was accessed. The pages were read from an ordinary browser tab at a modest pace (about three requests per second). Flipkart's terms of use may restrict automated access, so the data is used for coursework only and is not redistributed.
@@ -673,49 +687,84 @@ top_terms_df""")
 
 md("""**Reading the classifier result.** TF-IDF is fitted inside a scikit-learn Pipeline, so it only sees training data, and negation words ("not", "no", "never") are kept. Compare each model's accuracy with the majority-class baseline printed above, and read **negative recall and macro-F1** (cross-validated numbers are more stable than the single split). The coefficients describe associations inside the classifier, not causes of dissatisfaction.""")
 
-md("""### 12b. Out-of-domain test on the old Amazon `Electronics_5.json` file
+md("""### 12b. Train on the whole Amazon `Electronics_5.json` file, test on Flipkart
 
-`Electronics_5.json` is the public Amazon Electronics review file (about 1.7 million reviews, collected years ago from Amazon's US store; each product and reviewer has at least 5 reviews). We do **not** use it for any business finding, because it describes a different market and period. We use it only to **test the methods on far more negative reviews than our own data has**: a random sample of about 20,000 reviews was drawn from the file (`data/sample_electronics5.py`, seed 42), cleaned the same way (at least 3 words, duplicates removed, 1-2 and 4-5 star reviews only) and used in three checks: (1) VADER against star ratings, (2) a classifier trained on Flipkart and tested on this Amazon sample, and (3) the reverse.""")
+`Electronics_5.json` is the public Amazon Electronics review file (about 1.7 million reviews, collected years ago from Amazon's US store). Flipkart is our **main data**, so here it plays the role of the **test set**, and the old Amazon file is used only as **training data**. The question: if a seller only had this old, large Amazon file, would a model trained on it still recognise negative reviews on Flipkart? None of the business findings come from Amazon.
 
-code("""amz = pd.read_csv(os.path.join(BASE, "data", "amazon_electronics5_test_sample.csv")).dropna(subset=["review_text"])
-amz["n_words"] = amz["review_text"].str.findall(r"[A-Za-z]+").str.len()
-amz = amz[(amz["n_words"] >= 3) & amz["rating"].isin([1, 2, 4, 5])].copy()
-amz["norm"] = amz["review_text"].str.lower().str.replace(r"[^a-z0-9 ]", "", regex=True).str.strip()
-amz = amz.drop_duplicates("norm").reset_index(drop=True)
+This version uses the **whole file, not a random sample**. It is read line by line, cleaned the same way as our own data (at least 3 words, duplicates removed, only 1-2 and 4-5 star reviews), and used to train Logistic Regression and Naive Bayes (TF-IDF, 500 terms). The trained models are then tested on all of the Flipkart reviews they have never seen. The result is compared with the Flipkart-only models of section 12a.
+
+Put `Electronics_5.json` in the `data/` folder (it is ignored by git because it is 1.48 GB). If the file is missing, the cell falls back to the 18,376-review sample in `data/amazon_electronics5_test_sample.csv`.""")
+
+code("""import json, collections
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+AMZ_CANDIDATES = [os.path.join(BASE, "data", "Electronics_5.json"),
+                  os.path.join(os.path.dirname(BASE), "_old_to_delete", "archive (3)", "Electronics_5.json")]
+AMZ_JSON = next((p for p in AMZ_CANDIDATES if os.path.exists(p)), None)
+
+def load_amazon_full(path):
+    ratings, texts, seen, total = [], [], set(), 0
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            total += 1
+            d = json.loads(line)
+            t = (d.get("reviewText") or "").strip()
+            r = int(d.get("overall", 0))
+            if not t or r not in (1, 2, 4, 5):
+                continue
+            if len(re.findall(r"[A-Za-z]+", t)) < 3:
+                continue
+            key = hash(re.sub(r"[^a-z0-9 ]", "", t.lower()).strip())
+            if key in seen:
+                continue
+            seen.add(key); ratings.append(r); texts.append(t)
+    print(f"Read {total:,} lines from {os.path.basename(path)}; kept {len(texts):,} reviews after cleaning")
+    return pd.DataFrame({"rating": ratings, "review_text": texts})
+
+if AMZ_JSON:
+    amz = load_amazon_full(AMZ_JSON)
+    amz_source = "whole file"
+else:
+    print("Electronics_5.json not found, using the 18,376-review sample instead")
+    amz = pd.read_csv(os.path.join(BASE, "data", "amazon_electronics5_test_sample.csv")).dropna(subset=["review_text"])
+    amz["n_words"] = amz["review_text"].str.findall(r"[A-Za-z]+").str.len()
+    amz = amz[(amz["n_words"] >= 3) & amz["rating"].isin([1, 2, 4, 5])].copy()
+    amz["norm"] = amz["review_text"].str.lower().str.replace(r"[^a-z0-9 ]", "", regex=True).str.strip()
+    amz = amz.drop_duplicates("norm")[["rating", "review_text"]].reset_index(drop=True)
+    amz_source = "18,376-review sample"
 amz["clean_text"] = amz["review_text"].apply(clean_text)
 amz["label"] = np.where(amz["rating"] >= 4, "Positive", "Negative")
-print(f"Amazon Electronics_5 test sample: {len(amz):,} reviews ({(amz['label'] == 'Negative').sum():,} negative, "
-      f"{(amz['label'] == 'Negative').mean():.0%}); majority baseline {(amz['label'] == 'Positive').mean():.2f}")
+print(f"Amazon Electronics_5 training data ({amz_source}): {len(amz):,} reviews ({(amz['label'] == 'Negative').sum():,} negative, "
+      f"{(amz['label'] == 'Negative').mean():.0%}). Flipkart test data: {len(y):,} reviews ({(y == 'Negative').mean():.0%} negative; "
+      f"majority baseline {(y == 'Positive').mean():.2f})")
 
-# (1) VADER against star rating on the large sample
-amz["vader"] = amz["review_text"].apply(lambda t: sia.polarity_scores(str(t)[:2000])["compound"])
-amz["vader_label"] = np.where(amz["vader"] <= -0.05, "Negative", "Positive")
-v_rec = recall_score(amz["label"], amz["vader_label"], pos_label="Negative")
-v_prec = (amz.loc[amz["vader_label"] == "Negative", "label"] == "Negative").mean()
-print(f"VADER on Amazon sample: accuracy {accuracy_score(amz['label'], amz['vader_label']):.3f}, negative recall {v_rec:.2f}, "
-      f"negative precision {v_prec:.2f}, macro-F1 {f1_score(amz['label'], amz['vader_label'], average='macro'):.2f}")
+# TF-IDF vocabulary of the 500 most frequent terms, counted chunk by chunk (same rule as TfidfVectorizer(max_features=500)),
+# so the full vocabulary of 1.4 million reviews never has to sit in memory.
+counts = collections.Counter()
+for i in range(0, len(amz), 100_000):
+    cv = CountVectorizer(ngram_range=(1, 2), stop_words=STOP)
+    Xc = cv.fit_transform(amz["clean_text"].iloc[i:i + 100_000])
+    counts.update(dict(zip(cv.get_feature_names_out(), np.asarray(Xc.sum(axis=0)).ravel())))
+amz_vocab = [w for w, _ in counts.most_common(500)]
+amz_vec = TfidfVectorizer(ngram_range=(1, 2), stop_words=STOP, vocabulary=amz_vocab)
+X_amz = amz_vec.fit_transform(amz["clean_text"])
+X_fk = amz_vec.transform(X_text)
 
-ood = [{"setting": "VADER on Amazon sample", "model": "VADER", "accuracy": round(accuracy_score(amz["label"], amz["vader_label"]), 3),
-        "negative_recall": round(v_rec, 3), "negative_precision": round(v_prec, 3),
-        "macro_f1": round(f1_score(amz["label"], amz["vader_label"], average="macro"), 3), "test_reviews": len(amz)}]
-
-# (2) train on Flipkart, test on Amazon   (3) train on Amazon, test on Flipkart
-amz_train = amz.sample(min(8000, len(amz)), random_state=42)
+ood = []
 for name, model in models:
-    for setting, Xtr, ytr, Xte, yte in [
-            ("train Flipkart -> test Amazon", X_text, y, amz["clean_text"], amz["label"]),
-            ("train Amazon -> test Flipkart", amz_train["clean_text"], amz_train["label"], X_text, y)]:
-        p = make_pipeline(model).fit(Xtr, ytr).predict(Xte)
-        rec = recall_score(yte, p, pos_label="Negative")
-        prec = (yte[p == "Negative"] == "Negative").mean() if (p == "Negative").any() else 0.0
-        ood.append({"setting": setting, "model": name, "accuracy": round(accuracy_score(yte, p), 3),
-                    "negative_recall": round(rec, 3), "negative_precision": round(prec, 3),
-                    "macro_f1": round(f1_score(yte, p, average="macro"), 3), "test_reviews": len(yte)})
+    m2 = type(model)(**model.get_params()).fit(X_amz, amz["label"])
+    pred = m2.predict(X_fk)
+    rec = recall_score(y, pred, pos_label="Negative")
+    prec = (y[pred == "Negative"] == "Negative").mean() if (pred == "Negative").any() else 0.0
+    ood.append({"setting": f"train Amazon ({amz_source}) -> test Flipkart", "model": name,
+                "accuracy": round(accuracy_score(y, pred), 3), "negative_recall": round(rec, 3),
+                "negative_precision": round(prec, 3), "macro_f1": round(f1_score(y, pred, average="macro"), 3),
+                "test_reviews": len(y)})
 ood_df = pd.DataFrame(ood)
 ood_df.to_csv(os.path.join(OUT_DIR, "out_of_domain_results.csv"), index=False)
 ood_df""")
 
-md("""**Reading the out-of-domain test.** The majority-class baseline is printed above; a model is only useful if its **negative recall and macro-F1** beat it. A drop from the in-domain scores in Section 12 shows how much of what the classifier learned is specific to Flipkart wording and Indian electronics, which is why we do not draw business conclusions from the Amazon file.""")
+md("""**Reading the Amazon-trained result.** The majority-class baseline for Flipkart is 0.65; a model is only useful if its **negative recall and macro-F1** are good as well. Comparing these scores with the Flipkart-only models of Section 12 shows how much of what a classifier needs is specific to the marketplace it will be used on. Amazon is used only as outside training data, which is why no business conclusion comes from it.""")
 
 code(r"""from wordcloud import WordCloud
 

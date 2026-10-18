@@ -6,7 +6,7 @@
 - **Small groups.** Smartwatches have 553 reviews and some category-aspect cells are small (e.g. Smartwatch Customer Service, 14 mentions); read those with their confidence intervals.
 - **Rule-based tagging.** The aspect lexicon and VADER misread sarcasm, mixed sentences and mentions of other products. The 80-mention audit puts Negative-tag precision at about 66% (53 of 80). That audit was a first pass by the assistant and should be re-checked by the team.
 - **Strict cleaning removes real reviews.** Short, garbage, duplicate and copy-paste reviews were dropped (23,046 raw to 10,005), which favours longer reviews (median 9 words).
-- **Old test file.** Electronics_5.json is a roughly six-year-old Amazon file with different products and a very positive mix; it is used only as an out-of-domain test.
+- **Old training file.** Electronics_5.json is a roughly six-year-old Amazon file with different products and a very positive mix (88%); it is used only as outside training data, never for a business finding.
 - **Only Flipkart.** Amazon.in needed a login, which we did not bypass.
 
 ## 15. Conclusion
