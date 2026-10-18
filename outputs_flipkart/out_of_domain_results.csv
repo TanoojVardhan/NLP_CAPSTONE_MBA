@@ -1,0 +1,6 @@
+setting,model,accuracy,negative_recall,negative_precision,macro_f1,test_reviews
+VADER on Amazon sample,VADER,0.852,0.442,0.417,0.672,18376
+train Flipkart -> test Amazon,Logistic Regression,0.78,0.695,0.325,0.653,18376
+train Amazon -> test Flipkart,Logistic Regression,0.818,0.854,0.698,0.809,9423
+train Flipkart -> test Amazon,Multinomial Naive Bayes,0.864,0.473,0.461,0.695,18376
+train Amazon -> test Flipkart,Multinomial Naive Bayes,0.651,0.009,1.0,0.403,9423
