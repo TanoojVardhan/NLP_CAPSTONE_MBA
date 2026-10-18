@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.env
+
+# Large raw source data (the 1.48 GB Amazon file is not part of the repo)
+Electronics_5.json
+*.json.gz
+*.zip
+
+# Microsoft Office temp/lock files
+~$*
+*.tmp
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Old files kept outside the project
+_old_to_delete/
+
+# Secrets
+*secret*.json
+*credentials*.json
+
+# Reports and presentations stay local
+documents/
