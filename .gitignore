@@ -7,7 +7,7 @@ venv/
 env/
 .env
 
-# Large raw source data (the 1.48 GB Amazon file is not part of the repo)
+# Large raw source data
 Electronics_5.json
 *.json.gz
 *.zip

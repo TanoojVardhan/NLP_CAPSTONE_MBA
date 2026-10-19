@@ -687,85 +687,6 @@ top_terms_df""")
 
 md("""**Reading the classifier result.** TF-IDF is fitted inside a scikit-learn Pipeline, so it only sees training data, and negation words ("not", "no", "never") are kept. Compare each model's accuracy with the majority-class baseline printed above, and read **negative recall and macro-F1** (cross-validated numbers are more stable than the single split). The coefficients describe associations inside the classifier, not causes of dissatisfaction.""")
 
-md("""### 12b. Train on the whole Amazon `Electronics_5.json` file, test on Flipkart
-
-`Electronics_5.json` is the public Amazon Electronics review file (about 1.7 million reviews, collected years ago from Amazon's US store). Flipkart is our **main data**, so here it plays the role of the **test set**, and the old Amazon file is used only as **training data**. The question: if a seller only had this old, large Amazon file, would a model trained on it still recognise negative reviews on Flipkart? None of the business findings come from Amazon.
-
-This version uses the **whole file, not a random sample**. It is read line by line, cleaned the same way as our own data (at least 3 words, duplicates removed, only 1-2 and 4-5 star reviews), and used to train Logistic Regression and Naive Bayes (TF-IDF, 500 terms). The trained models are then tested on all of the Flipkart reviews they have never seen. The result is compared with the Flipkart-only models of section 12a.
-
-Put `Electronics_5.json` in the `data/` folder (it is ignored by git because it is 1.48 GB). If the file is missing, the cell falls back to the 18,376-review sample in `data/amazon_electronics5_test_sample.csv`.""")
-
-code("""import json, collections
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-
-AMZ_CANDIDATES = [os.path.join(BASE, "data", "Electronics_5.json"),
-                  os.path.join(os.path.dirname(BASE), "_old_to_delete", "archive (3)", "Electronics_5.json")]
-AMZ_JSON = next((p for p in AMZ_CANDIDATES if os.path.exists(p)), None)
-
-def load_amazon_full(path):
-    ratings, texts, seen, total = [], [], set(), 0
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            total += 1
-            d = json.loads(line)
-            t = (d.get("reviewText") or "").strip()
-            r = int(d.get("overall", 0))
-            if not t or r not in (1, 2, 4, 5):
-                continue
-            if len(re.findall(r"[A-Za-z]+", t)) < 3:
-                continue
-            key = hash(re.sub(r"[^a-z0-9 ]", "", t.lower()).strip())
-            if key in seen:
-                continue
-            seen.add(key); ratings.append(r); texts.append(t)
-    print(f"Read {total:,} lines from {os.path.basename(path)}; kept {len(texts):,} reviews after cleaning")
-    return pd.DataFrame({"rating": ratings, "review_text": texts})
-
-if AMZ_JSON:
-    amz = load_amazon_full(AMZ_JSON)
-    amz_source = "whole file"
-else:
-    print("Electronics_5.json not found, using the 18,376-review sample instead")
-    amz = pd.read_csv(os.path.join(BASE, "data", "amazon_electronics5_test_sample.csv")).dropna(subset=["review_text"])
-    amz["n_words"] = amz["review_text"].str.findall(r"[A-Za-z]+").str.len()
-    amz = amz[(amz["n_words"] >= 3) & amz["rating"].isin([1, 2, 4, 5])].copy()
-    amz["norm"] = amz["review_text"].str.lower().str.replace(r"[^a-z0-9 ]", "", regex=True).str.strip()
-    amz = amz.drop_duplicates("norm")[["rating", "review_text"]].reset_index(drop=True)
-    amz_source = "18,376-review sample"
-amz["clean_text"] = amz["review_text"].apply(clean_text)
-amz["label"] = np.where(amz["rating"] >= 4, "Positive", "Negative")
-print(f"Amazon Electronics_5 training data ({amz_source}): {len(amz):,} reviews ({(amz['label'] == 'Negative').sum():,} negative, "
-      f"{(amz['label'] == 'Negative').mean():.0%}). Flipkart test data: {len(y):,} reviews ({(y == 'Negative').mean():.0%} negative; "
-      f"majority baseline {(y == 'Positive').mean():.2f})")
-
-# TF-IDF vocabulary of the 500 most frequent terms, counted chunk by chunk (same rule as TfidfVectorizer(max_features=500)),
-# so the full vocabulary of 1.4 million reviews never has to sit in memory.
-counts = collections.Counter()
-for i in range(0, len(amz), 100_000):
-    cv = CountVectorizer(ngram_range=(1, 2), stop_words=STOP)
-    Xc = cv.fit_transform(amz["clean_text"].iloc[i:i + 100_000])
-    counts.update(dict(zip(cv.get_feature_names_out(), np.asarray(Xc.sum(axis=0)).ravel())))
-amz_vocab = [w for w, _ in counts.most_common(500)]
-amz_vec = TfidfVectorizer(ngram_range=(1, 2), stop_words=STOP, vocabulary=amz_vocab)
-X_amz = amz_vec.fit_transform(amz["clean_text"])
-X_fk = amz_vec.transform(X_text)
-
-ood = []
-for name, model in models:
-    m2 = type(model)(**model.get_params()).fit(X_amz, amz["label"])
-    pred = m2.predict(X_fk)
-    rec = recall_score(y, pred, pos_label="Negative")
-    prec = (y[pred == "Negative"] == "Negative").mean() if (pred == "Negative").any() else 0.0
-    ood.append({"setting": f"train Amazon ({amz_source}) -> test Flipkart", "model": name,
-                "accuracy": round(accuracy_score(y, pred), 3), "negative_recall": round(rec, 3),
-                "negative_precision": round(prec, 3), "macro_f1": round(f1_score(y, pred, average="macro"), 3),
-                "test_reviews": len(y)})
-ood_df = pd.DataFrame(ood)
-ood_df.to_csv(os.path.join(OUT_DIR, "out_of_domain_results.csv"), index=False)
-ood_df""")
-
-md("""**Reading the Amazon-trained result.** The majority-class baseline for Flipkart is 0.65; a model is only useful if its **negative recall and macro-F1** are good as well. Comparing these scores with the Flipkart-only models of Section 12 shows how much of what a classifier needs is specific to the marketplace it will be used on. Amazon is used only as outside training data, which is why no business conclusion comes from it.""")
-
 code(r"""from wordcloud import WordCloud
 
 pos_text = " ".join(df[df["rating"] >= 4]["clean_text"].astype(str))
@@ -814,6 +735,11 @@ print("Saved interactive dashboard to", os.path.join(OUT_DIR, "dashboard.html"))
 md(INSIGHTS)
 md(LIMITS)
 
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import clean_markdown
+for _c in cells:
+    _c["source"] = _c["source"]
+clean_markdown.apply(cells)
 nb["cells"] = cells
 nb["metadata"] = {
     "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},

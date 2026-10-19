@@ -1,29 +1,22 @@
 # E-Commerce Sentiment Analysis & Defect Diagnostics
 24INFS7101 NLP & Text Analytics in Business, A2 Capstone.
 
-Aspect-based sentiment analysis (ABSA) of 119 hand-collected verified Amazon.in reviews (15 products, 5 categories).
+Aspect-based sentiment analysis (ABSA) of Flipkart consumer-electronics reviews: 10,004 cleaned verified-purchase reviews, 92 products, 5 categories. It shows which product aspect (battery, build, comfort, customer service and so on) drives negative sentiment in each category.
 
 ## Folder layout
-- data/ : real_amazon_reviews_sample.csv (the dataset)
-- notebooks/ABSA_Capstone_Phase2.ipynb : executed notebook (main analysis)
-- notebooks/build_notebook.py : script that generates and executes the notebook
-- outputs/ : result tables (CSV), negative_mentions_manual_audit.csv (hand-read Negative labels), dashboard.html
-- outputs/figures/ : charts
+- `data/flipkart_raw.csv` : raw scraped reviews (23,046 rows)
+- `data/flipkart_reviews.csv` : cleaned dataset used by the notebook
+- `data/flipkart_cleaning_log.json` : counts for every cleaning step
+- `data/build_flipkart_csv.py` : cleans the raw file: `python3 data/build_flipkart_csv.py data/flipkart_raw.csv data/flipkart_reviews.csv`
+- `data/negative_mentions_manual_audit_flipkart.csv` : hand-read sample of 80 Negative labels
+- `notebooks/ABSA_Capstone_Flipkart.ipynb` : the analysis; `build_notebook_flipkart.py` rebuilds it (reads `insights_flipkart.md`, `limitations_flipkart.md`, `clean_markdown.py`)
+- `outputs_flipkart/` : result tables, figures and the dashboard
 
 ## How to run
-1. Install Python 3.10+ and then: pip install -r requirements.txt
-2. python -m spacy download en_core_web_sm
-3. Open notebooks/ABSA_Capstone_Phase2.ipynb and Run All (or run build_notebook.py to rebuild it).
-NLTK data (vader_lexicon, stopwords, punkt, wordnet) is downloaded by the first cells.
+1. Python 3.10+. Open the notebook and Run All; the first cell installs the libraries and language data with `!pip`.
+2. Random seeds are fixed (42), so results match the report with the same data.
 
-Random seeds are fixed (42). Results will match the report only with the same dataset.
-
-## Known limits
-Small sample (119 reviews, 9 one-star); rule-based aspect lexicon and VADER; results are directional. See the Limitations section of the report.
-
-## Flipkart version (main results, 15 Oct 2026)
-- Data: `data/flipkart_reviews.csv` (10,004 verified reviews, 92 products, 5 categories), cleaning counts in `data/flipkart_cleaning_log.json`. Raw data: `data/flipkart_raw.csv` (23,046 review rows). Clean with: `python3 data/build_flipkart_csv.py data/flipkart_raw.csv data/flipkart_reviews.csv`.
-- Amazon training data: put the whole `Electronics_5.json` (1.48 GB, git-ignored) in `data/`. Section 12b trains on it (1,543,743 cleaned reviews) and tests on Flipkart. If the file is missing, the notebook falls back to `data/amazon_electronics5_test_sample.csv` (18,376 reviews sampled by `data/sample_electronics5.py`).
-- Notebook: `notebooks/ABSA_Capstone_Flipkart.ipynb`, rebuilt by `python notebooks/build_notebook_flipkart.py` (reads `notebooks/insights_flipkart.md` and `limitations_flipkart.md`). Results in `outputs_flipkart/`.
-- The sample is not random (recent, negative-first and most-helpful views of each product page). The 80-mention audit file was a first pass by the assistant; please re-check it.
-- The earlier 119-review Amazon.in pilot and the old scraping files were moved out of this folder (see _old_to_delete).
+## Notes
+- The sample is not random (recent, negative-first and most-helpful views of each product page), so compare aspects with each other rather than quoting overall percentages.
+- The 80-mention audit file was a first pass; please re-check it as a team.
+- Reports and presentations are in `documents/`, which is git-ignored.

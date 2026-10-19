@@ -1,3 +1,0 @@
-setting,model,accuracy,negative_recall,negative_precision,macro_f1,test_reviews
-train Amazon (whole file) -> test Flipkart,Logistic Regression,0.85,0.917,0.728,0.843,9422
-train Amazon (whole file) -> test Flipkart,Multinomial Naive Bayes,0.652,0.012,1.0,0.406,9422
