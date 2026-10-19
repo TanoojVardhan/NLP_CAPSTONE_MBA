@@ -8,7 +8,6 @@ env/
 .env
 
 # Large raw source data
-Electronics_5.json
 *.json.gz
 *.zip
 

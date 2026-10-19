@@ -66,7 +66,7 @@ md("""## 1a. Ethical Considerations, Bias & Data Privacy  *(Unit I: Ethical issu
 # ===========================================================================
 md("""## 2. Data Collection & Understanding  *(Unit I: Text data sources; Unit II groundwork)*
 
-An earlier phase of this project analysed 119 reviews copied by hand from Amazon.in. Amazon now requires a sign-in for every review page after the first, which cannot be done without logging in, so this notebook uses a larger dataset from **Flipkart.com**, which shows product-level reviews publicly.
+This notebook uses product reviews from **Flipkart.com**, which shows product-level reviews publicly.
 
 **How the data was collected.** For each product the review pages were read in three views: the **most recent** reviews, the **lowest-rated first** view, and the **most helpful** view. Each row keeps `product_name`, `category`, `rating`, `review_title`, `review_text`, `review_date`, `helpful_votes`, `is_verified` and `sample_type` (which view the review came from) plus the source URL. Flipkart shows recent reviews as "N days ago", so dates are converted to an approximate calendar date (collection date 2026-10-14).
 
@@ -695,7 +695,7 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 for ax, text, title, cmap in [(axes[0], pos_text, "Positive Reviews (4-5 star)", "Greens"),
                                (axes[1], neg_text, "Negative Reviews (1-2 star)", "Reds")]:
     wc = WordCloud(width=700, height=500, background_color="white", colormap=cmap,
-                   stopwords={"product", "amazon", "india", "use", "using", "used"}).generate(text or "no data")
+                   stopwords={"product", "india", "use", "using", "used"}).generate(text or "no data")
     ax.imshow(wc, interpolation="bilinear"); ax.axis("off"); ax.set_title(title)
 plt.tight_layout(); plt.savefig(os.path.join(FIG_DIR, "05_wordclouds.png"), dpi=150)
 plt.show()""")
