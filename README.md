@@ -22,7 +22,7 @@ Random seeds are fixed (42). Results will match the report only with the same da
 Small sample (119 reviews, 9 one-star); rule-based aspect lexicon and VADER; results are directional. See the Limitations section of the report.
 
 ## Flipkart version (main results, 15 Oct 2026)
-- Data: `data/flipkart_reviews.csv` (10,005 verified reviews, 91 products, 5 categories), cleaning counts in `data/flipkart_cleaning_log.json`. Raw dumps: `data/flipkart_raw.psv`, `data/flipkart_raw2.psv`. Clean with: `cat data/flipkart_raw.psv data/flipkart_raw2.psv | python3 data/build_flipkart_csv.py x data/flipkart_reviews.csv`.
+- Data: `data/flipkart_reviews.csv` (10,004 verified reviews, 92 products, 5 categories), cleaning counts in `data/flipkart_cleaning_log.json`. Raw data: `data/flipkart_raw.csv` (23,046 review rows). Clean with: `python3 data/build_flipkart_csv.py data/flipkart_raw.csv data/flipkart_reviews.csv`.
 - Amazon training data: put the whole `Electronics_5.json` (1.48 GB, git-ignored) in `data/`. Section 12b trains on it (1,543,743 cleaned reviews) and tests on Flipkart. If the file is missing, the notebook falls back to `data/amazon_electronics5_test_sample.csv` (18,376 reviews sampled by `data/sample_electronics5.py`).
 - Notebook: `notebooks/ABSA_Capstone_Flipkart.ipynb`, rebuilt by `python notebooks/build_notebook_flipkart.py` (reads `notebooks/insights_flipkart.md` and `limitations_flipkart.md`). Results in `outputs_flipkart/`.
 - The sample is not random (recent, negative-first and most-helpful views of each product page). The 80-mention audit file was a first pass by the assistant; please re-check it.

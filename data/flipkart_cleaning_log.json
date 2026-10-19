@@ -2,16 +2,16 @@
  "raw rows": 23046,
  "after id dedup": 18646,
  "verified only": 18642,
- "removed as garbage": 6090,
+ "removed as garbage": 6091,
  "garbage breakdown": {
-  "fewer than 3 words": 3009,
+  "fewer than 3 words": 3010,
   "too short / emoji-only": 2956,
   "repeated characters": 122,
   "gibberish (vowel ratio)": 2,
   "one repeated word": 1
  },
- "within-product text duplicates removed": 214,
- "cross-product copy-paste removed": 2165,
+ "within-product text duplicates removed": 211,
+ "cross-product copy-paste removed": 2168,
  "products dropped (fewer than 30 clean reviews)": [
   "boAt Wave Call Smartwatch",
   "Logitech C270 HD Webcam",
@@ -30,7 +30,7 @@
   "Zebronics Zeb Sharp Pro Full Hd [c080]",
   "Carecase Full Hd 1080p Webcam Pc [65e9]"
  ],
- "final rows": 10005,
- "products": 91,
+ "final rows": 10004,
+ "products": 92,
  "collected_on": "2026-10-14"
 }

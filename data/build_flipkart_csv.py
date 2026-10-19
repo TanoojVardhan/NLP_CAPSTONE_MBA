@@ -1,4 +1,4 @@
-"""Clean the raw Flipkart review dump into data/flipkart_reviews.csv (run: python3 build_flipkart_csv.py RAW OUT)."""
+"""Clean the raw Flipkart review dump into data/flipkart_reviews.csv (run: python3 build_flipkart_csv.py data/flipkart_raw.csv data/flipkart_reviews.csv)."""
 import sys, re, html, unicodedata, datetime as dt
 import pandas as pd
 
@@ -45,23 +45,17 @@ def to_date(s):
         return d.isoformat(), True          # month only -> 1st of month
     return None, True
 
-rows, cur = [], None
-for line in open(RAW, encoding="utf-8") if False else sys.stdin:
-    line = line.rstrip("\n")
-    if line.startswith("#P"):
-        parts = line[2:].split("|"); cur = (int(parts[0]), parts[2])
-        if int(parts[0]) >= 100 and len(parts) > 3:
-            q = parts[3]; cat = CATMAP[q]
-            nm = " ".join(w.capitalize() if not w.isdigit() else w for w in parts[1].split("-")[:6])
-            P[int(parts[0])] = (nm + " [" + parts[2][3:7] + "]", cat)
-        continue
-    f = line.split("|", 7)
-    if len(f) < 8: continue
-    rid, rating, date, helpful, cert, tag, title, text = f
-    idx, itm = cur
-    rows.append(dict(raw_id=rid, p=idx, itm=itm, rating=int(rating), date_raw=date, helpful=int(helpful),
-                     verified=bool(int(cert)), sample_type={"R":"recent","N":"negative_first","H":"helpful"}[tag],
-                     title=html.unescape(title).strip(), text=html.unescape(text).strip()))
+raw = pd.read_csv(RAW, dtype=str, keep_default_na=False)
+for _, r in raw.drop_duplicates("product_index").iterrows():
+    if int(r.product_index) >= 100 and r.search_query:
+        nm = " ".join(w.capitalize() if not w.isdigit() else w for w in r.product_slug.split("-")[:6])
+        P[int(r.product_index)] = (nm + " [" + r.item_id[3:7] + "]", CATMAP[r.search_query])
+rows = []
+for r in raw.itertuples(index=False):
+    rows.append(dict(raw_id=r.review_id, p=int(r.product_index), itm=r.item_id, rating=int(r.rating), date_raw=r.date_text,
+                     helpful=int(r.helpful_votes), verified=bool(int(r.certified)),
+                     sample_type={"R":"recent","N":"negative_first","H":"helpful"}[r.view_tag],
+                     title=html.unescape(r.title).strip(), text=html.unescape(r.text).strip()))
 df = pd.DataFrame(rows)
 log = {"raw rows": len(df)}
 
