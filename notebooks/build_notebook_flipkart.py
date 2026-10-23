@@ -656,7 +656,7 @@ for name, model in models:
     print(f"=== {name} (single 75/25 split) ===")
     print(classification_report(y_test, preds, zero_division=0))
     print(confusion_matrix(y_test, preds, labels=["Negative", "Positive"]), " <- rows: true Negative/Positive, columns: predicted\\n")
-    # With only 9 negative reviews, one split is very unstable, so also use 3-fold stratified cross-validation
+    # One split can be lucky or unlucky, so also use 3-fold stratified cross-validation
     cv_preds = cross_val_predict(make_pipeline(model), X_text, y, cv=StratifiedKFold(3, shuffle=True, random_state=42))
     print(f"3-fold CV: accuracy {accuracy_score(y, cv_preds):.2f}, negative recall {recall_score(y, cv_preds, pos_label='Negative'):.2f}, "
           f"negative precision {(cv_preds[(cv_preds == 'Negative')] == y[(cv_preds == 'Negative')]).mean() if (cv_preds == 'Negative').any() else 0:.2f}, "
@@ -687,7 +687,7 @@ top_terms_df""")
 
 md("""**Reading the classifier result.** TF-IDF is fitted inside a scikit-learn Pipeline, so it only sees training data, and negation words ("not", "no", "never") are kept. Compare each model's accuracy with the majority-class baseline printed above, and read **negative recall and macro-F1** (cross-validated numbers are more stable than the single split). The coefficients describe associations inside the classifier, not causes of dissatisfaction.""")
 
-code(r"""from wordcloud import WordCloud
+code(r"""from wordcloud import WordCloud, STOPWORDS
 
 pos_text = " ".join(df[df["rating"] >= 4]["clean_text"].astype(str))
 neg_text = " ".join(df[df["rating"] <= 2]["clean_text"].astype(str))
@@ -695,7 +695,7 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 for ax, text, title, cmap in [(axes[0], pos_text, "Positive Reviews (4-5 star)", "Greens"),
                                (axes[1], neg_text, "Negative Reviews (1-2 star)", "Reds")]:
     wc = WordCloud(width=700, height=500, background_color="white", colormap=cmap,
-                   stopwords={"product", "india", "use", "using", "used"}).generate(text or "no data")
+                   stopwords=(STOPWORDS - {"not", "no", "never"}) | {"product", "india", "use", "using", "used"}).generate(text or "no data")
     ax.imshow(wc, interpolation="bilinear"); ax.axis("off"); ax.set_title(title)
 plt.tight_layout(); plt.savefig(os.path.join(FIG_DIR, "05_wordclouds.png"), dpi=150)
 plt.show()""")
